@@ -5,6 +5,7 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
 const OptimizeCSSAssetsPlugin = require('optimize-css-assets-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
+const VueLoaderPlugin = require('vue-loader/lib/plugin');
 
 module.exports = (env, options) => {
   const devMode = options.mode !== 'production';
@@ -17,7 +18,7 @@ module.exports = (env, options) => {
       ]
     },
     entry: {
-      'app': glob.sync('./vendor/**/*.js').concat(['./js/app.js'])
+      'app': glob.sync('./vendor/**/*.js').concat(['./js/app_phx.js'])
     },
     output: {
       filename: '[name].js',
@@ -39,14 +40,48 @@ module.exports = (env, options) => {
           use: [
             MiniCssExtractPlugin.loader,
             'css-loader',
-            'sass-loader',
+            'sass-loader'
+          ],
+        },
+        {
+          test: /\.vue$/,
+          loader: 'vue-loader',
+          options: {
+            loaders: {
+              // Since sass-loader (weirdly) has SCSS as its default parse mode, we map
+              // the "scss" and "sass" values for the lang attribute to the right configs here.
+              // other preprocessors should work out of the box, no loader config like this necessary.
+              'scss': 'vue-style-loader!css-loader!sass-loader',
+              'sass': 'vue-style-loader!css-loader!sass-loader?indentedSyntax',
+            }
+            // other vue-loader options go here
+          }
+        },
+        {
+          test: /\.tsx?$/,
+          loader: 'ts-loader',
+          exclude: /node_modules/,
+          options: {
+            appendTsSuffixTo: [/\.vue$/],
+          }
+        },
+        {
+          test: /\.(svg|png|jpe?g|gif)$/i,
+          use: [
+            {
+              loader: 'file-loader',
+            },
           ],
         }
       ]
     },
+    resolve: {
+      extensions: [".ts", ".vue", ".js"]
+    },
     plugins: [
       new MiniCssExtractPlugin({ filename: '../css/app.css' }),
-      new CopyWebpackPlugin([{ from: 'static/', to: '../' }])
+      new CopyWebpackPlugin([{ from: 'static/', to: '../' }]),
+      new VueLoaderPlugin()
     ]
     .concat(devMode ? [new HardSourceWebpackPlugin()] : [])
   }
